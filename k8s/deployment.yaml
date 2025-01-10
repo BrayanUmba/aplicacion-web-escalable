@@ -42,9 +42,14 @@ jobs:
       - name: Set up kubectl
         uses: azure/setup-kubectl@v1
 
-      - name: Update pip using --user flag
+      - name: Remove apt-installed pip
         run: |
-          pip install --upgrade --user pip
+          sudo apt-get purge -y python3-pip
+
+      - name: Install pip using get-pip.py
+        run: |
+          curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+          python3 get-pip.py
 
       - name: Deploy to Kubernetes
         run: |
