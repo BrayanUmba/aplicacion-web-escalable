@@ -1,9 +1,9 @@
----
-# configmap.yaml
+kubectl apply -f - <<EOF
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: app-config
 data:
   POSTGRES_DB: myapp
-  POSTGRES_HOST: postgres
+  POSTGRES_HOST: postgres-postgresql
+EOF
