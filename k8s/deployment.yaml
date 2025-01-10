@@ -11,7 +11,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -20,39 +19,19 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.12'
-          cache: 'pip'
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Cache Docker layers
-        uses: actions/cache@v3
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
-      - name: Install dependencies
+      - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y curl build-essential libssl-dev libffi-dev python3-dev
-          # Create virtual environment
-          python3 -m venv venv
-          # Activate virtual environment and upgrade pip
-          source venv/bin/activate
-          pip install --upgrade pip
+          sudo apt-get install -y curl build-essential
 
-      - name: Set up Docker Compose
+      - name: Install Python packages
         run: |
-          sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-          sudo chmod +x /usr/local/bin/docker-compose
+          python -m pip install --upgrade pip --no-cache-dir --force-reinstall
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Build and test services
-        run: |
-          docker-compose -f db/docker-compose.yml up -d --build
-          docker-compose -f db/docker-compose.yml logs
-          docker-compose -f db/docker-compose.yml ps
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
 
       - name: Login to DockerHub
         uses: docker/login-action@v3
@@ -66,19 +45,11 @@ jobs:
           context: .
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/flask-app:latest
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new
-
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -86,14 +57,12 @@ jobs:
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
 
-      - name: Configure kubectl
-        uses: azure/k8s-set-context@v3
-        with:
-          kubeconfig: ${{ secrets.KUBE_CONFIG }}
-
       - name: Deploy to Kubernetes
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
         run: |
+          echo "$KUBE_CONFIG" > kubeconfig.yaml
+          export KUBECONFIG=kubeconfig.yaml
           kubectl apply -f kubernetes/deployment.yaml
           kubectl apply -f kubernetes/service.yaml
           kubectl apply -f kubernetes/ingress.yaml
-          kubectl rollout status deployment/flask-app
