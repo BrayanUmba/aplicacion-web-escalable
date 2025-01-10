@@ -42,6 +42,10 @@ jobs:
       - name: Set up kubectl
         uses: azure/setup-kubectl@v1
 
+      - name: Update pip using --user flag
+        run: |
+          pip install --upgrade --user pip
+
       - name: Deploy to Kubernetes
         run: |
           kubectl apply -f kubernetes/deployment.yaml
