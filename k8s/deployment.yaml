@@ -1,22 +1,60 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: flask-app
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: flask-app
-  template:
-    metadata:
-      labels:
-        app: flask-app
-    spec:
-      containers:
-        - name: flask-app
-          image: flask-app-image
-          ports:
-            - containerPort: 5000
-          env:
-            - name: DATABASE_URI
-              value: "postgresql://postgres:password@db:5432/mydb"
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Set up Docker Compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl python3-pip build-essential libssl-dev libffi-dev python3-dev
+          sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          # Evitar la actualización de pip si ya está presente
+          if ! python3 -m pip --version &>/dev/null; then
+            sudo apt-get install python3-pip
+          fi
+
+      - name: Build and start services with Docker Compose
+        run: |
+          docker-compose -f db/docker-compose.yml up -d --build
+
+      - name: Log in to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push to DockerHub
+        run: |
+          docker tag flask-app:latest ${{ secrets.DOCKER_USERNAME }}/flask-app:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/flask-app:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v1
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f kubernetes/deployment.yaml
+          kubectl apply -f kubernetes/service.yaml
+          kubectl apply -f kubernetes/ingress.yaml
