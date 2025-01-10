@@ -1,9 +1,7 @@
-kubectl apply -f - <<EOF
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: app-config
 data:
-  POSTGRES_DB: myapp
-  POSTGRES_HOST: postgres-postgresql
-EOF
+  POSTGRES_DB: myapp        # El nombre de la base de datos
+  POSTGRES_HOST: postgres-postgresql-0  # El host de PostgreSQL
