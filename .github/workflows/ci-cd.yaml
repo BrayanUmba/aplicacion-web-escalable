@@ -23,7 +23,7 @@ jobs:
 
       - name: Build the Docker image
         run: |
-          docker-compose up --build
+          docker-compose up --build -d   # Ejecuta en segundo plano
 
       - name: Log in to DockerHub
         uses: docker/login-action@v2
