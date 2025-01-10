@@ -1,2 +1,2 @@
 # aplicacion-web-escalable
-Arquitectura para implementar una aplicación web escalable. La solución debe incluir: 
+Arquitectura para implementar una aplicación web escalable.
