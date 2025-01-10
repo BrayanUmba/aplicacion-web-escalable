@@ -22,7 +22,7 @@ jobs:
           sudo apt-get install -y curl python3-pip build-essential libssl-dev libffi-dev python3-dev
           sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
           sudo chmod +x /usr/local/bin/docker-compose
-          # Evitar la actualización de pip si ya está presente
+          # Evitar actualización de pip
           if ! python3 -m pip --version &>/dev/null; then
             sudo apt-get install python3-pip
           fi
